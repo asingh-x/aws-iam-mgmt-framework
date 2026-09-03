@@ -7,6 +7,24 @@ ticket describing what they need, the platform team turns that into a
 small request file, and the platform validates it against guardrails and
 deploys exactly the account it touches.
 
+## Getting started
+
+1. **Bootstrap.** Every account this framework deploys to needs a role it
+   can assume that carries the necessary (but scoped, non-admin) IAM
+   provisioning permissions -- `OrgIAMProvisioner_DoNotDelete`, created by
+   `bootstrap/iam-provisioner.yaml`. Deploy it once as a CloudFormation
+   StackSet and it covers every account, including new ones as they join
+   the org. See [bootstrap/README.md](bootstrap/README.md).
+2. **Terraform state.** Set `TG_STATE_BUCKET` and `TG_STATE_REGION` in
+   your environment (or CI config) -- `live/root.hcl` reads them to
+   configure the S3 backend. Locking is S3's native lockfile locking, no
+   DynamoDB table required.
+3. **Try it locally, no AWS needed.** `make check` runs guardrail
+   validation, the Python test suite, and `terraform test` against a mock
+   provider -- fully offline. `make new-request COMPONENT=roles
+   ENVIRONMENT=prod ACCOUNT_ID=999999999999 NAME=my-role` scaffolds a new
+   request for you to fill in.
+
 ## Architecture
 
 ```mermaid
