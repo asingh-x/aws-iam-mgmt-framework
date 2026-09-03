@@ -1,0 +1,8 @@
+account_id: "111111111111"
+environment: production
+
+name: ReportingS3Read
+owner: reporting-team@example.com
+description: "Read-only access to the customer-reports-prod bucket"
+
+file: policy.json

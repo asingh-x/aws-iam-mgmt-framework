@@ -1,0 +1,19 @@
+account_id: "111111111111"
+environment: production
+
+identity:
+  type: aws_service_role
+  name: reporting-lambda
+  owner: reporting-team@example.com
+
+trust:
+  service: lambda.amazonaws.com
+
+policies:
+  aws_managed:
+    - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  custom:
+    - name: ReportingS3Access
+      file: custom-policy.json
+
+create_instance_profile: false

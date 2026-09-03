@@ -1,0 +1,16 @@
+account_id: "999999999999"
+environment: prod
+
+identity:
+  type: aws_service_role
+  name: sandbox-role-instance-profile
+  owner: platform-team@example.com
+
+trust:
+  service: ec2.amazonaws.com
+
+policies:
+  aws_managed:
+    - arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess
+
+create_instance_profile: true

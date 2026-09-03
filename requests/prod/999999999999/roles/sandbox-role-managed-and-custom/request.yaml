@@ -1,0 +1,19 @@
+account_id: "999999999999"
+environment: prod
+
+identity:
+  type: aws_service_role
+  name: sandbox-role-managed-and-custom
+  owner: platform-team@example.com
+
+trust:
+  service: lambda.amazonaws.com
+
+policies:
+  aws_managed:
+    - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  custom:
+    - name: SandboxRoleCustomAccess
+      file: custom-policy.json
+
+create_instance_profile: false

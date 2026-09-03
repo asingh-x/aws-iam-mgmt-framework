@@ -1,0 +1,8 @@
+account_id: "999999999999"
+environment: prod
+
+name: SandboxStandaloneRead
+owner: platform-team@example.com
+description: "Real-account proof test for the iam-policy module"
+
+file: policy.json

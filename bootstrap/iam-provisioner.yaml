@@ -1,0 +1,219 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Bootstraps this account for the AWS IAM Platform framework: creates the
+  mandatory permissions boundary policy and the OrgIAMProvisioner_DoNotDelete role that
+  Terraform/Terragrunt assumes to manage account-local IAM users, roles,
+  and customer-managed policies. Deploy this as a CloudFormation StackSet
+  with service-managed permissions across the target OUs so every current
+  AND future member account gets OrgIAMProvisioner_DoNotDelete automatically -- see
+  bootstrap/README.md for the deploy commands.
+
+Parameters:
+  TrustedPrincipalArn:
+    Type: String
+    Description: >
+      ARN of the IAM role in the hub/CI account that GitHub Actions
+      authenticates as via OIDC. This is the ONLY principal allowed to
+      assume OrgIAMProvisioner_DoNotDelete in this account.
+      Example: arn:aws:iam::<hub-account-id>:role/github-actions-iam-platform
+
+  TrustedExternalId:
+    Type: String
+    Default: ""
+    Description: >
+      Optional extra defense-in-depth: if set, OrgIAMProvisioner_DoNotDelete will only
+      be assumable when this ExternalId is supplied. Leave blank to skip.
+
+Conditions:
+  HasExternalId: !Not [!Equals [!Ref TrustedExternalId, ""]]
+
+Resources:
+  OrgMandatoryPermissionsBoundary:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: org-mandatory-permissions-boundary
+      Description: >
+        Mandatory permissions boundary applied to every IAM user/role this
+        framework creates. Caps privilege escalation (IAM administration,
+        AWS Organizations administration, account management) regardless
+        of what the identity's own policies grant.
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: DenyIamAdministration
+            Effect: Deny
+            Action:
+              - iam:CreateUser
+              - iam:DeleteUser
+              - iam:CreateRole
+              - iam:DeleteRole
+              - iam:CreatePolicy
+              - iam:CreatePolicyVersion
+              - iam:DeletePolicy
+              - iam:DeletePolicyVersion
+              - iam:SetDefaultPolicyVersion
+              - iam:AttachUserPolicy
+              - iam:DetachUserPolicy
+              - iam:AttachRolePolicy
+              - iam:DetachRolePolicy
+              - iam:PutUserPolicy
+              - iam:DeleteUserPolicy
+              - iam:PutRolePolicy
+              - iam:DeleteRolePolicy
+              - iam:CreateAccessKey
+              - iam:DeleteAccessKey
+              - iam:UpdateAccessKey
+              - iam:CreateLoginProfile
+              - iam:UpdateLoginProfile
+              - iam:DeleteLoginProfile
+              - iam:PutUserPermissionsBoundary
+              - iam:DeleteUserPermissionsBoundary
+              - iam:PutRolePermissionsBoundary
+              - iam:DeleteRolePermissionsBoundary
+              - iam:UpdateAssumeRolePolicy
+            Resource: "*"
+          - Sid: DenyOrganizationsAdministration
+            Effect: Deny
+            Action: organizations:*
+            Resource: "*"
+          - Sid: DenyAccountManagement
+            Effect: Deny
+            Action:
+              - account:*
+              - aws-portal:*
+            Resource: "*"
+          - Sid: AllowEverythingElseUpToExplicitDenies
+            Effect: Allow
+            Action: "*"
+            Resource: "*"
+
+  OrgIAMProvisioner_DoNotDelete:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: OrgIAMProvisioner_DoNotDelete
+      Description: >
+        Assumed by Terragrunt (via the hub account's CI/CD role) to manage
+        this account's IAM users/roles/customer-managed policies. Scoped
+        to IAM provisioning actions only -- cannot touch Organizations,
+        account settings, or its own trust/boundary.
+      MaxSessionDuration: 3600
+      PermissionsBoundary: !Ref OrgMandatoryPermissionsBoundary
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Ref TrustedPrincipalArn
+            Action: sts:AssumeRole
+            Condition:
+              !If
+                - HasExternalId
+                - StringEquals:
+                    sts:ExternalId: !Ref TrustedExternalId
+                - !Ref AWS::NoValue
+      Policies:
+        - PolicyName: iam-provisioning
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: ReadIamState
+                Effect: Allow
+                Action:
+                  - iam:GetRole
+                  - iam:GetUser
+                  - iam:GetPolicy
+                  - iam:GetPolicyVersion
+                  - iam:GetInstanceProfile
+                  - iam:ListRolePolicies
+                  - iam:ListAttachedRolePolicies
+                  - iam:ListAttachedUserPolicies
+                  - iam:ListUserPolicies
+                  - iam:ListPolicyVersions
+                  - iam:ListInstanceProfilesForRole
+                  - iam:ListRoleTags
+                  - iam:ListUserTags
+                  - iam:ListPolicyTags
+                Resource: "*"
+
+              - Sid: WriteIamIdentities
+                Effect: Allow
+                Action:
+                  - iam:CreateRole
+                  - iam:DeleteRole
+                  - iam:CreateUser
+                  - iam:DeleteUser
+                  - iam:CreatePolicy
+                  - iam:DeletePolicy
+                  - iam:CreatePolicyVersion
+                  - iam:DeletePolicyVersion
+                  - iam:SetDefaultPolicyVersion
+                  - iam:AttachRolePolicy
+                  - iam:DetachRolePolicy
+                  - iam:AttachUserPolicy
+                  - iam:DetachUserPolicy
+                  - iam:CreateInstanceProfile
+                  - iam:DeleteInstanceProfile
+                  - iam:AddRoleToInstanceProfile
+                  - iam:RemoveRoleFromInstanceProfile
+                  - iam:TagRole
+                  - iam:UntagRole
+                  - iam:TagUser
+                  - iam:UntagUser
+                  - iam:TagPolicy
+                  - iam:UntagPolicy
+                  - iam:TagInstanceProfile
+                  - iam:UntagInstanceProfile
+                Resource: "*"
+
+              - Sid: DenyCreateWithoutMandatoryBoundary
+                Effect: Deny
+                Action:
+                  - iam:CreateRole
+                  - iam:CreateUser
+                Resource: "*"
+                Condition:
+                  StringNotEquals:
+                    iam:PermissionsBoundary: !Ref OrgMandatoryPermissionsBoundary
+
+              - Sid: DenySelfModification
+                Effect: Deny
+                Action:
+                  - iam:DeleteRole
+                  - iam:UpdateAssumeRolePolicy
+                  - iam:PutRolePolicy
+                  - iam:DeleteRolePolicy
+                  - iam:AttachRolePolicy
+                  - iam:DetachRolePolicy
+                  - iam:PutRolePermissionsBoundary
+                  - iam:DeleteRolePermissionsBoundary
+                Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/OrgIAMProvisioner_DoNotDelete"
+
+              - Sid: DenyBoundaryTampering
+                Effect: Deny
+                Action:
+                  - iam:DeletePolicy
+                  - iam:CreatePolicyVersion
+                  - iam:DeletePolicyVersion
+                  - iam:SetDefaultPolicyVersion
+                Resource: !Ref OrgMandatoryPermissionsBoundary
+
+              - Sid: DenyAttachingAdminEquivalentPolicies
+                Effect: Deny
+                Action:
+                  - iam:AttachRolePolicy
+                  - iam:AttachUserPolicy
+                Resource: "*"
+                Condition:
+                  ArnEquals:
+                    iam:PolicyARN:
+                      - arn:aws:iam::aws:policy/AdministratorAccess
+                      - arn:aws:iam::aws:policy/IAMFullAccess
+
+Outputs:
+  OrgIAMProvisioner_DoNotDeleteRoleArn:
+    Description: ARN Terragrunt's root.hcl assumes for this account.
+    Value: !GetAtt OrgIAMProvisioner_DoNotDelete.Arn
+
+  PermissionsBoundaryArn:
+    Description: ARN referenced by every live/*/iam/*/terragrunt.hcl unit.
+    Value: !Ref OrgMandatoryPermissionsBoundary

@@ -1,0 +1,8 @@
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terragrunt-cache/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/

@@ -1,0 +1,17 @@
+account_id: "111111111111"
+environment: production
+
+identity:
+  type: iam_group
+  name: reporting-group
+  owner: reporting-team@example.com
+
+policies:
+  aws_managed:
+    - arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess
+  custom:
+    - name: ReportingGroupAccess
+      file: custom-policy.json
+
+members:
+  - reporting-app

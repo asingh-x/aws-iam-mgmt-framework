@@ -1,0 +1,15 @@
+account_id: "111111111111"
+environment: production
+
+identity:
+  type: aws_service_role
+  name: bad-role
+
+trust:
+  service: ec2.amazonaws.com
+
+policies:
+  aws_managed:
+    - arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess
+
+create_instance_profile: false

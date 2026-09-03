@@ -1,0 +1,26 @@
+# Guardrail configuration consumed by scripts/validate_requests.py.
+#
+# prohibited_prefixes: any IAM action (case-insensitive) starting with one
+# of these prefixes is rejected wherever it appears in a submitted policy
+# document, with the given human-readable category in the error message.
+#
+# prohibited_exact_actions: single actions to reject outright even if they
+# don't fall under a prefix above.
+#
+# resource_wildcard_allowed_actions: the ONLY actions permitted to use
+# Resource: "*" in a submitted policy document. Empty today, meaning no
+# action may use a wildcard resource — every request must scope Resource
+# to specific ARNs. Extend this list only with platform-team sign-off.
+prohibited_prefixes:
+  - prefix: "iam:"
+    category: "IAM administration actions"
+  - prefix: "organizations:"
+    category: "AWS Organizations administration actions"
+  - prefix: "account:"
+    category: "Account-management actions"
+  - prefix: "aws-portal:"
+    category: "Account-management actions"
+
+prohibited_exact_actions: []
+
+resource_wildcard_allowed_actions: []

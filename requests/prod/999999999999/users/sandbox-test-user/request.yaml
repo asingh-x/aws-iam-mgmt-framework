@@ -1,0 +1,19 @@
+account_id: "999999999999"
+environment: prod
+
+identity:
+  type: legacy_iam_user
+  name: sandbox-test-user
+  owner: platform-team@example.com
+
+business_reason: "Real-account proof test for the iam-user module"
+exception_ticket: "SEC-0001"
+expires_on: "2027-03-31"
+
+policy:
+  type: custom
+  file: custom-policy.json
+
+credential:
+  rotation_days: 60
+  delivery: secrets_manager

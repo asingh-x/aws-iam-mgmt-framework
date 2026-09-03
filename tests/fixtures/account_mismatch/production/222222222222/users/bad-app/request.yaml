@@ -1,0 +1,15 @@
+account_id: "111111111111"
+environment: production
+
+identity:
+  type: legacy_iam_user
+  name: bad-app
+  owner: reporting-team@example.com
+
+business_reason: "Testing account id / path mismatch rejection"
+exception_ticket: "SEC-9999"
+expires_on: "2027-03-31"
+
+policy:
+  type: custom
+  file: custom-policy.json

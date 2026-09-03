@@ -1,0 +1,25 @@
+# Allow-list of AWS-managed IAM policy ARNs that request files may reference
+# under `policies.aws_managed`. Any ARN not listed here is rejected by
+# scripts/validate_requests.py.
+#
+# To add a new approved policy: add an entry with a `note` explaining its
+# scope and why it's safe to hand to application teams. This file lives
+# under guardrails/, so a change here requires the controlled-rollout path
+# in CI (see scripts/changed_targets.py) rather than an automatic org-wide
+# deploy.
+allowed_policies:
+  - arn: arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    note: >-
+      Standard Lambda execution role permissions (CloudWatch Logs group/stream
+      creation and PutLogEvents). Narrow and safe for any Lambda role.
+  - arn: arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess
+    note: >-
+      Read-only access to CloudWatch metrics, alarms, and dashboards.
+  - arn: arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+    note: >-
+      BROAD: grants read (ListBucket/GetObject/etc.) on every S3 bucket in
+      the account, not just the ones the application actually needs. Prefer
+      a custom, single-bucket-scoped policy (see
+      requests/production/111111111111/policies/reporting-s3-read/ for an
+      example) for any new request. This entry stays on the allow-list only
+      for backward compatibility with existing broad use cases.
