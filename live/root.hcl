@@ -17,12 +17,6 @@ locals {
 
   state_bucket = get_env("TG_STATE_BUCKET", "REPLACE_ME_STATE_BUCKET")
   state_region = get_env("TG_STATE_REGION", "us-east-1")
-
-  # Locking: set TG_STATE_DYNAMODB_TABLE to use a DynamoDB lock table (the
-  # traditional approach). If it's unset, fall back to the S3 backend's
-  # native lockfile-based locking (Terraform >= 1.10, via conditional
-  # writes -- no DynamoDB table required).
-  state_dynamodb_table = get_env("TG_STATE_DYNAMODB_TABLE", "")
 }
 
 remote_state {
@@ -33,15 +27,13 @@ remote_state {
     if_exists = "overwrite"
   }
 
-  config = merge(
-    {
-      bucket  = local.state_bucket
-      key     = "${path_relative_to_include()}/terraform.tfstate"
-      region  = local.state_region
-      encrypt = true
-    },
-    local.state_dynamodb_table != "" ? { dynamodb_table = local.state_dynamodb_table } : { use_lockfile = true }
-  )
+  config = {
+    bucket       = local.state_bucket
+    key          = "${path_relative_to_include()}/terraform.tfstate"
+    region       = local.state_region
+    encrypt      = true
+    use_lockfile = true
+  }
 }
 
 generate "provider" {

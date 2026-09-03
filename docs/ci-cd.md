@@ -97,11 +97,11 @@ Whatever CI tool you use needs to provide:
 - **(b)** OIDC-federated (or equivalent) short-lived AWS credentials,
   scoped per environment/account -- read-only for the plan stage,
   write-scoped to `OrgIAMProvisioner_DoNotDelete` for the apply stage.
-- **(c)** a state bucket and locking mechanism, already configured via
-  `live/root.hcl`. That file reads `TG_STATE_BUCKET`, `TG_STATE_REGION`
-  (defaults to `us-east-1`), and `TG_STATE_DYNAMODB_TABLE` (optional --
-  falls back to S3's native lockfile locking on Terraform >= 1.10 if
-  unset) as environment variables. Set them however your CI tool exposes
+- **(c)** a state bucket, already configured via `live/root.hcl`. That
+  file reads `TG_STATE_BUCKET` and `TG_STATE_REGION` (defaults to
+  `us-east-1`) as environment variables. Locking uses S3's native
+  lockfile locking (Terraform >= 1.10, via conditional writes) -- no
+  DynamoDB table needed. Set the env vars however your CI tool exposes
   environment/secret variables; no other config surface is needed.
 
 ## Reference implementation
